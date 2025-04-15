@@ -1,7 +1,8 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import db from "../../../models/index.js";
-import AppError from "../../../utils/AppError.js"; // adjust path as needed
+import AppError from "../../../utils/AppError.js"; 
+import { Op } from 'sequelize';
 
 const user = db.user;
 const task = db.task;
@@ -40,19 +41,47 @@ class TaskController {
     try {
       const userId = req.user?.dataValues?.id;
 
-      const tasks = await task.findAll({
-        where: { userId, isDeleted: false },
+      const { page = 1, limit = 10, status, reminder = false } = req.query;
+      const offset = (page - 1) * limit;
+
+      const whereCondition = {
+        userId,
+        isDeleted: false,
+      };
+
+      if (reminder === 'true') {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        whereCondition.status = 'pending'; 
+        whereCondition.dueDate = {
+          [Op.lte]: tomorrow,
+        };
+      } else if (status) {
+       
+        whereCondition.status = status;
+      }
+
+      const { count, rows: tasks } = await task.findAndCountAll({
+        where: whereCondition,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [['dueDate', 'ASC']],
       });
 
       res.status(200).json({
         status: 200,
         message: "Tasks fetched successfully",
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(count / limit),
+        totalTasks: count,
         tasks,
       });
     } catch (error) {
       next(error);
     }
   };
+
 
   static getTaskById = async (req, res, next) => {
     try {
@@ -68,7 +97,7 @@ class TaskController {
       }
 
       res.status(200).json({
-        status: "success",
+        status: 200,
         message: "Task fetched successfully",
         task: taskDetail,
       });
@@ -94,7 +123,7 @@ class TaskController {
       await taskToUpdate.update({ title, description, status, dueDate });
 
       res.status(200).json({
-        status: "success",
+        status: 200,
         message: "Task updated successfully",
         task: taskToUpdate,
       });
@@ -119,7 +148,7 @@ class TaskController {
       await taskToDelete.update({ isDeleted: true });
 
       res.status(200).json({
-        status: "success",
+        status: 200,
         message: "Task deleted successfully",
       });
     } catch (error) {
