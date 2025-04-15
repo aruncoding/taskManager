@@ -4,6 +4,7 @@ import express from 'express'
 import cors from 'cors'
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import registerRoutes from './registerRoutes.js';
 import db from './models/index.js'
 import errorHandler from './middlewares/errorHandler.js';
@@ -13,9 +14,18 @@ const port = process.env.PORT || 5000;
 app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(cors({
-  origin: 'http://localhost:3001', // Replace this with your frontend origin
-  credentials: true,               // Allow credentials (cookies)
+  origin: 'http://localhost:3001', 
+  credentials: true,               
 }));
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 100,                
+  message: "Too many requests from this IP, please try again after 15 minutes."
+});
+
+
+app.use(limiter);
 
 // routes
 registerRoutes(app);

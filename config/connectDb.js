@@ -15,7 +15,6 @@ const connection = mysql.createConnection({
         idle: 10000
     }
 });
-console.log("processss",process.env.DATABASE_HOST),
 connection.connect(function (err) {
     if (err) throw err;
     console.log("Connected!");
